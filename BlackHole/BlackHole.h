@@ -17,6 +17,9 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <sys/syslog.h>
+#include "msgid.h"
+
+#include <CoreAudio/CoreAudio.h>
 
 //==================================================================================================
 #pragma mark -
@@ -34,18 +37,18 @@
     #define    DebugMsg(inFormat, ...)    syslog(LOG_NOTICE, inFormat, ## __VA_ARGS__)
 
     #define    FailIf(inCondition, inHandler, inMessage)                                    \
-    if(inCondition)                                                                \
-    {                                                                            \
-        DebugMsg(inMessage);                                                    \
-        goto inHandler;                                                            \
+    if(inCondition)                                                                         \
+    {                                                                                       \
+        DebugMsg(inMessage);                                                                \
+        goto inHandler;                                                                     \
     }
 
-    #define    FailWithAction(inCondition, inAction, inHandler, inMessage)                    \
-    if(inCondition)                                                                \
-    {                                                                            \
-        DebugMsg(inMessage);                                                    \
-        { inAction; }                                                            \
-        goto inHandler;                                                            \
+    #define    FailWithAction(inCondition, inAction, inHandler, inMessage)                  \
+    if(inCondition)                                                                         \
+    {                                                                                       \
+        DebugMsg(inMessage);                                                                \
+        { inAction; }                                                                       \
+        goto inHandler;                                                                     \
         }
 
 #else
@@ -53,16 +56,16 @@
     #define    DebugMsg(inFormat, ...)
 
     #define    FailIf(inCondition, inHandler, inMessage)                                    \
-    if(inCondition)                                                                \
-    {                                                                            \
-    goto inHandler;                                                            \
+    if(inCondition)                                                                         \
+    {                                                                                       \
+    goto inHandler;                                                                         \
     }
 
-    #define    FailWithAction(inCondition, inAction, inHandler, inMessage)                    \
-    if(inCondition)                                                                \
-    {                                                                            \
-    { inAction; }                                                            \
-    goto inHandler;                                                            \
+    #define    FailWithAction(inCondition, inAction, inHandler, inMessage)                  \
+    if(inCondition)                                                                         \
+    {                                                                                       \
+    { inAction; }                                                                           \
+    goto inHandler;                                                                         \
     }
 
 #endif
@@ -100,17 +103,18 @@
 //    point out what a more complicated driver will need to do.
 enum
 {
-    kObjectID_PlugIn                    = kAudioObjectPlugInObject,
-    kObjectID_Box                        = 2,
-    kObjectID_Device                    = 3,
-    kObjectID_Stream_Input                = 4,
-    kObjectID_Volume_Input_Master        = 5,
-    kObjectID_Mute_Input_Master            = 6,
-    kObjectID_DataSource_Input_Master    = 7,
-    kObjectID_Stream_Output                = 8,
-    kObjectID_Volume_Output_Master        = 9,
-    kObjectID_Mute_Output_Master        = 10,
-    kObjectID_DataSource_Output_Master    = 11
+    kObjectID_PlugIn                        = kAudioObjectPlugInObject,
+    kObjectID_Box                           = 2,
+    kObjectID_Device                        = 3,
+    kObjectID_Stream_Input                  = 4,
+    kObjectID_Volume_Input_Master           = 5,
+    kObjectID_Mute_Input_Master             = 6,
+    kObjectID_DataSource_Input_Master       = 7,
+    kObjectID_Stream_Output                 = 8,
+    kObjectID_Volume_Output_Master          = 9,
+    kObjectID_Mute_Output_Master            = 10,
+    kObjectID_DataSource_Output_Master      = 11,
+    kObjectID_ClockSource                   = 12
 };
 
 //    Declare the stuff that tracks the state of the plug-in, the device and its sub-objects.
@@ -130,6 +134,7 @@ static Boolean                      gBox_Acquired                       = true;
 #define                             kDevice_UID                         "BlackHole_UID"
 #define                             kDevice_ModelUID                    "BlackHole_ModelUID"
 static pthread_mutex_t              gDevice_IOMutex                     = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t              gDevice_ClockMutex                  = PTHREAD_MUTEX_INITIALIZER;
 static Float64                      gDevice_SampleRate                  = 44100.0;
 static UInt64                       gDevice_IOIsRunning                 = 0;
 static const UInt32                 kDevice_RingBufferSize              = 16384;
@@ -168,6 +173,26 @@ static void*                        ringBuffer;
 static UInt64                       ringBufferOffset                    = 0;
 static UInt64                       inIOBufferByteSize                  = 0;
 static UInt64                       remainingRingBufferByteSize         = 0;
+
+static UInt32                       kClockSource_NumberItems            = 10;
+#define                             kClockSource_ItemNamePattern         "BlackHole Clock %i"
+static UInt32                       gClockSource_Value                  = 0;
+
+static CFMessagePortRef             remote;
+
+static AudioDeviceID                blackHoleDeviceID;
+
+
+static UInt64 gLastHostTime;
+static Float64 gLastSampleTime;
+static UInt64 gNextHostTime;
+
+static OSStatus BlackHole_SampleRateListener( AudioObjectID                       inObjectID,
+UInt32                              inNumberAddresses,
+const AudioObjectPropertyAddress*   inAddresses,
+void* __nullable                    inClientData);
+
+//static void BlackHole_UpdateZeroTimeStamp(void);
 
 //kAudioHardwarePropertySleepingIsAllowed
 
