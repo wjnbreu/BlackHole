@@ -5,15 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+
+## [0.3.0] - Unreleased
+### Added
+- Clock Syncronization: Use any audio device as the clock source for BlackHole.
+
+### Issues
+- BlackHole sample rate does not update if external clock source changes.
+- BlackHole may temporarily hang (up to a minute) when changing sample rate when using an external clock while the device is running.
+
 ## [0.2.7] - 2020-08-08
 ### Changed
 - Improved Logarithmic Volume Control
 - Various updates to README. 
-
-## [0.3.0] - Unreleased
-### Added
-- Clock Syncronization: Use any audio device as the source source for BlackHole.
-
 
 ## [0.2.6] - 2020-02-09
 ### Changed
