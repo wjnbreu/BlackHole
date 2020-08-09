@@ -7,13 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [0.3.0] - Unreleased
-
 ### Added
--
-
-### Changed
-- Logarithmic volume control
-- Improved performance
+- Clock Syncronization: Use any audio device as the source source for BlackHole.
 
 
 ## [0.2.6] - 2020-02-09
