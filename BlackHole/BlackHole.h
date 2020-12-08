@@ -17,7 +17,6 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <sys/syslog.h>
-#include "msgid.h"
 
 #include <CoreAudio/CoreAudio.h>
 
